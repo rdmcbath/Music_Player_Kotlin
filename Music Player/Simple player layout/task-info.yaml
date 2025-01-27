@@ -1,0 +1,90 @@
+type: edu
+files:
+  - name: src/main/java/org/hyperskill/musicplayer/MainActivity.kt
+    visible: true
+    learner_created: false
+  - name: src/main/res/drawable/ic_launcher_background.xml
+    visible: true
+    learner_created: false
+  - name: src/main/res/drawable/ic_pause.xml
+    visible: true
+    learner_created: false
+  - name: src/main/res/drawable/ic_play.xml
+    visible: true
+    learner_created: false
+  - name: src/main/res/drawable-v24/ic_launcher_foreground.xml
+    visible: true
+    learner_created: false
+  - name: src/main/res/layout/activity_main.xml
+    visible: true
+    learner_created: false
+  - name: src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+    visible: true
+    learner_created: false
+  - name: src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+    visible: true
+    learner_created: false
+  - name: src/main/res/raw/wisdom.mp3
+    visible: true
+    is_binary: true
+    learner_created: false
+  - name: src/main/res/values/colors.xml
+    visible: true
+    learner_created: false
+  - name: src/main/res/values/strings.xml
+    visible: true
+    learner_created: false
+  - name: src/main/res/values/styles.xml
+    visible: true
+    learner_created: false
+  - name: src/main/AndroidManifest.xml
+    visible: true
+    learner_created: false
+  - name: src/test/java/org/hyperskill/musicplayer/internals/AbstractUnitTest.kt
+    visible: false
+    learner_created: false
+  - name: src/test/java/org/hyperskill/musicplayer/internals/AddPlaylistScreen.kt
+    visible: false
+    learner_created: false
+  - name: src/test/java/org/hyperskill/musicplayer/internals/CustomMediaPlayerShadow.java
+    visible: false
+    learner_created: false
+  - name: src/test/java/org/hyperskill/musicplayer/internals/CustomShadowAsyncDifferConfig.java
+    visible: false
+    learner_created: false
+  - name: src/test/java/org/hyperskill/musicplayer/internals/FakeContentProvider.kt
+    visible: false
+    learner_created: false
+  - name: src/test/java/org/hyperskill/musicplayer/internals/MusicPlayerBaseScreen.kt
+    visible: false
+    learner_created: false
+  - name: src/test/java/org/hyperskill/musicplayer/internals/MusicPlayerUnitTests.kt
+    visible: false
+    learner_created: false
+  - name: src/test/java/org/hyperskill/musicplayer/internals/PlayMusicScreen.kt
+    visible: false
+    learner_created: false
+  - name: src/test/java/org/hyperskill/musicplayer/internals/SongFake.kt
+    visible: false
+    learner_created: false
+  - name: src/test/java/org/hyperskill/musicplayer/Stage1UnitTest.kt
+    visible: false
+    learner_created: false
+  - name: build.gradle
+    visible: true
+    learner_created: false
+  - name: src/main/java/org/hyperskill/musicplayer/MainPlayerControllerFragment.kt
+    visible: true
+    learner_created: true
+  - name: src/main/res/layout/fragment_main_player_controller.xml
+    visible: true
+    learner_created: true
+  - name: src/main/res/menu/main_menu.xml
+    visible: true
+    learner_created: true
+feedback_link: https://hyperskill.org/learn/step/22739#comment
+status: Solved
+feedback:
+  message: Congratulations!
+  time: "Sun, 19 Jan 2025 17:39:06 UTC"
+record: 1
