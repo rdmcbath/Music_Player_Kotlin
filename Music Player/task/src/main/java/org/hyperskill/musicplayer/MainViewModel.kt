@@ -1,18 +1,20 @@
 package org.hyperskill.musicplayer
 
-import android.app.Application
+import android.content.Context
 import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
-import androidx.lifecycle.AndroidViewModel
+import android.provider.MediaStore
+import android.util.Log
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.util.UUID
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
-    private var mediaPlayerHelper: MediaPlayerHelper = MediaPlayerHelper(application.applicationContext)
+class MainViewModel(context: Context) : ViewModel() {
+    private var mediaPlayerHelper: MediaPlayerHelper = MediaPlayerHelper(context)
     var previousTrackId: Int? = null
     private lateinit var songListAdapter: SongListAdapter
     private lateinit var selectorAdapter: SongSelectorAdapter
@@ -48,7 +50,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val isSelectedMap = _isSelectedMap.asStateFlow()
 
     private val _songDuration = MutableStateFlow(0)
-    val songDuration: StateFlow<Int> = _songDuration.asStateFlow()
 
     private val _currentPlaybackPosition = MutableStateFlow(0)
     val currentPlaybackPosition: StateFlow<Int> = _currentPlaybackPosition.asStateFlow()
@@ -63,48 +64,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         _songDuration.value = 0
+        _songs.value = emptyList()
         setupMediaPlayer()
     }
 
-    fun onSearchButtonClick() {
-        val hardCodedSongs = createHardCodedSongs()
-        _songs.value = hardCodedSongs  // Set songs immediately regardless of state
+    fun onSearchButtonClick(context: Context) {
+        Log.d("MainViewModel", "onSearchButtonClick called")
+        val songs = getDeviceSongs(context)
+        Log.d("MainViewModel", "Songs created: ${songs.size}")
 
-        val currentState = _playerState.value
+        // Save current states before updating
+        val wasPlaying = _isPlaying.value
+        val currentTrackId = _currentTrack.value?.id
 
-        // Update or create "All Songs" playlist
+        // Update songs
+        _songs.value = songs
+        songListAdapter.updateSongs(songs)
+        Log.d("MainViewModel", "After adapter update: ${songListAdapter.songs.size}")
+
+        // Check for "All Songs" playlist
         val allSongsPlaylist = _playlists.value.find { it.name == "All Songs" }
         if (allSongsPlaylist == null) {
             val newAllSongsPlaylist = Playlist(
                 id = UUID.randomUUID().toString(),
                 name = "All Songs",
-                songs = hardCodedSongs
+                songs = songs
             )
             _playlists.value = listOf(newAllSongsPlaylist)
-
-            if (currentState == PlayerState.PLAY_MUSIC) {
-                setCurrentPlaylist(newAllSongsPlaylist)
-            }
-        } else {
-            // Update existing playlist
-            val updatedAllSongs = allSongsPlaylist.copy(songs = hardCodedSongs)
-            _playlists.value = _playlists.value.map {
-                if (it.name == "All Songs") updatedAllSongs else it
-            }
-
-            if (currentState == PlayerState.PLAY_MUSIC) {
-                setCurrentPlaylist(updatedAllSongs)
-            }
+            _currentPlaylist.value = newAllSongsPlaylist
         }
 
-        if (currentState == PlayerState.ADD_PLAYLIST) {
-            _songSelectors.value = hardCodedSongs.map { song ->
-                SongSelector(song = song, isSelected = _isSelectedMap.value[song.id] ?: false)
+        // Restore the current track position if it exists in the new song list
+        currentTrackId?.let { id ->
+            val newPosition = songs.indexOfFirst { it.id == id }
+            if (newPosition != -1) {
+                _currentPosition.value = newPosition
+                _currentTrack.value = songs[newPosition]
+                _isPlaying.value = wasPlaying
             }
-            selectorAdapter.updateSongs(_songSelectors.value)
-            selectorAdapter.updateSelectedMap(_isSelectedMap.value)
         }
     }
+
+    /*>>>> MEDIA PLAYER & CONTROLLER REGION <<<<*/
 
     private fun setupMediaPlayer() {
         mediaPlayerHelper.setupMediaPlayer()
@@ -119,7 +120,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _songDuration.value = durationInMillis / 1000
     }
 
-    /*>>>> CONTROLLER REGION <<<<*/
     fun seekToPosition(positionInSeconds: Int) {
         mediaPlayerHelper.seekTo(positionInSeconds)
         _currentPlaybackPosition.value = positionInSeconds
@@ -133,7 +133,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _currentPlaybackPosition.value = currentPositionInSeconds
 
                 // Schedule next update
-                handler.postDelayed(this, 200)
+                handler.postDelayed(this, 100)
             }
         }
     }
@@ -157,7 +157,70 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun onPlayPauseClicked(position: Int) {
+        if (position !in songs.value.indices) return
+
+        _currentPosition.value = position
+        val selectedSong = songs.value[position]
+
+        when {
+            selectedSong != currentTrack.value || !mediaPlayerHelper.isInitialized() -> {
+                try {
+                    mediaPlayerHelper.cleanupMediaPlayer()
+
+                    previousTrackId = currentTrack.value?.id
+                    _currentTrack.value = selectedSong
+                    _isPlaying.value = true
+
+                    setupMediaPlayer()
+                    mediaPlayerHelper.startMediaPlayer(selectedSong.id)
+
+                    previousTrackId?.let { prevId ->
+                        songListAdapter.updateCurrentTrack(selectedSong, prevId)
+                    }
+
+                    startProgressTracking()
+                } catch (e: Exception) {
+                    mediaPlayerHelper.resetMediaPlayer()
+                }
+            }
+            selectedSong == currentTrack.value -> {
+                _isPlaying.value = !isPlaying.value
+
+                selectedSong.id.let { currentId ->
+                    songListAdapter.updateCurrentTrack(selectedSong, currentId)
+                }
+
+                try {
+                    if (_isPlaying.value) {
+                        mediaPlayerHelper.startMediaPlayer(selectedSong.id)
+                        seekToPosition(currentPlaybackPosition.value)
+                        startProgressTracking()
+                    } else {
+                        mediaPlayerHelper.pauseMediaPlayer()
+                        pauseProgressTracking()
+                    }
+                } catch (e: Exception) {
+                    mediaPlayerHelper.resetMediaPlayer()
+                }
+            }
+        }
+    }
+
+    fun onStopMediaPlayer() {
+        mediaPlayerHelper.stopMediaPlayer()
+        _isPlaying.value = false
+        stopProgressTracking()
+        _currentPlaybackPosition.value = 0
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        mediaPlayerHelper.cleanupMediaPlayer()
+    }
+
     /*>>>> PLAYLIST REGION <<<<*/
+
     fun canAddPlaylist(): Boolean {
         return _songs.value.isNotEmpty()
     }
@@ -212,67 +275,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun onPlayPauseClicked(position: Int) {
-        if (position !in songs.value.indices) return
-
-        _currentPosition.value = position
-        val selectedSong = songs.value[position]
-
-        when {
-            selectedSong != currentTrack.value || !mediaPlayerHelper.isInitialized() -> {
-                try {
-                    mediaPlayerHelper.cleanup()
-
-                    previousTrackId = currentTrack.value?.id
-                    _currentTrack.value = selectedSong
-                    _isPlaying.value = true
-
-                    setupMediaPlayer()
-                    mediaPlayerHelper.startMediaPlayer()
-
-                    previousTrackId?.let { prevId ->
-                        songListAdapter.updateCurrentTrack(selectedSong, prevId)
-                    }
-
-                    startProgressTracking()
-                } catch (e: Exception) {
-                    mediaPlayerHelper.resetMediaPlayer()
-                }
-            }
-            selectedSong == currentTrack.value -> {
-                _isPlaying.value = !isPlaying.value
-
-                selectedSong.id.let { currentId ->
-                    songListAdapter.updateCurrentTrack(selectedSong, currentId)
-                }
-
-                try {
-                    if (_isPlaying.value) {
-                        mediaPlayerHelper.startMediaPlayer()
-                        startProgressTracking()
-                    } else {
-                        mediaPlayerHelper.pauseMediaPlayer()
-                        pauseProgressTracking()
-                    }
-                } catch (e: Exception) {
-                    mediaPlayerHelper.resetMediaPlayer()
-                }
-            }
-        }
-    }
-
-    fun onStopMediaPlayer() {
-        mediaPlayerHelper.stopMediaPlayer()
-        _isPlaying.value = false
-        stopProgressTracking()
-        _currentPlaybackPosition.value = 0
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        mediaPlayerHelper.cleanup()
-    }
-
     fun onSongLongPressed(position: Int) {
         songs.value.getOrNull(position)?.let { song ->
             _isSelectedMap.value = mapOf(song.id to true)
@@ -297,7 +299,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         switchToPlayMusicState()
     }
 
-    // for PLAY_MUSIC state
     fun setCurrentPlaylist(playlist: Playlist) {
         val wasPlaying = _isPlaying.value
         val playlistToLoad = _playlists.value.find { it.name == playlist.name }
@@ -406,6 +407,46 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         currentPosition.value?.let {
             songListAdapter.updatePlayPauseButtonState(position, isPlaying.value)
         }
+    }
+
+    private fun getDeviceSongs(context: Context): List<Song> {
+        val songs = mutableListOf<Song>()
+        val projection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.DURATION
+        )
+
+        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+
+        try {
+            context.contentResolver.query(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                null,
+                null
+            )?.use { cursor ->
+                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+                val titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
+                val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+                val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+
+                while (cursor.moveToNext()) {
+                    val id = cursor.getInt(idColumn)
+                    val title = cursor.getString(titleColumn)
+                    val artist = cursor.getString(artistColumn)
+                    val duration = cursor.getLong(durationColumn)
+
+                    songs.add(Song(id, title, artist, duration))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MainViewModel", "Error loading songs", e)
+        }
+
+        return songs
     }
 
     private fun createHardCodedSongs(): List<Song> {

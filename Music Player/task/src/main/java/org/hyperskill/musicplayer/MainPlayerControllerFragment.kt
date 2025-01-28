@@ -10,7 +10,6 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -48,14 +47,31 @@ class MainPlayerControllerFragment : Fragment() {
         controllerTvCurrentTime = view.findViewById(R.id.controllerTvCurrentTime)
         controllerTvTotalTime = view.findViewById(R.id.controllerTvTotalTime)
 
-        // Update seekbar max when duration changes
+        // Initialize with default values
+        controllerSeekBar.max = 0
+        controllerTvCurrentTime.text = getString(R.string._00_00)
+        controllerTvTotalTime.text = getString(R.string._00_00)
+
+        // Update seekbar max and total time when a new song is selected
         lifecycleScope.launch {
-            viewModel.songDuration.collectLatest { duration ->
-                controllerSeekBar.max = duration
+            viewModel.currentTrack.collectLatest { track ->
+                track?.let {
+                    try {
+                        val durationInSeconds = (it.duration / 1000).toInt()
+                        controllerSeekBar.max = durationInSeconds
+                        updateTimeDisplay(controllerTvTotalTime, durationInSeconds)
+                    } catch (e: Exception) {
+                        controllerSeekBar.max = 0
+                        controllerTvTotalTime.text = getString(R.string._00_00)
+                    }
+                } ?: run {
+                    controllerSeekBar.max = 0
+                    controllerTvTotalTime.text = getString(R.string._00_00)
+                }
             }
         }
 
-        // Update current position
+        // Update current position and time
         lifecycleScope.launch {
             viewModel.currentPlaybackPosition.collectLatest { position ->
                 if (!controllerSeekBar.isPressed) {  // Only update if user isn't dragging
@@ -65,26 +81,16 @@ class MainPlayerControllerFragment : Fragment() {
             }
         }
 
-        // Update duration display
-        lifecycleScope.launch {
-            combine(
-                viewModel.songDuration,
-                viewModel.currentTrack
-            ) { durationInSeconds, currentTrack ->
-                Pair(durationInSeconds, currentTrack)
-            }.collectLatest { (durationInSeconds, currentTrack) ->
-                if (currentTrack != null) {
-                    updateTimeDisplay(controllerTvTotalTime, durationInSeconds)
-                } else {
-                    controllerTvTotalTime.text = getString(R.string._00_00)
-                }
-            }
-        }
-
         playPauseBtn.setOnClickListener {
             if (viewModel.songs.value.isNotEmpty()) {
-                viewModel.currentPosition.value?.let { position ->
-                    viewModel.onPlayPauseClicked(position)
+                if (viewModel.currentTrack.value == null) {
+                    // No song selected yet, start with first song
+                    viewModel.onPlayPauseClicked(0)
+                } else {
+                    // Continue with current song
+                    viewModel.currentPosition.value?.let { position ->
+                        viewModel.onPlayPauseClicked(position)
+                    }
                 }
             }
         }
@@ -94,6 +100,7 @@ class MainPlayerControllerFragment : Fragment() {
             controllerSeekBar.progress = 0
             updateTimeDisplay(controllerTvCurrentTime, 0)
 
+            // Only update the current song's button, don't default to 0
             viewModel.currentPosition.value?.let { position ->
                 viewModel.requestAdapterUpdateItemPlayPause(position)
             }
@@ -113,9 +120,10 @@ class MainPlayerControllerFragment : Fragment() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 seekBar?.progress?.let { progress ->
                     viewModel.seekToPosition(progress)
-                    // Make sure we update the display immediately
                     updateTimeDisplay(controllerTvCurrentTime, progress)
-                    viewModel.resumeProgressTracking()
+                    if (viewModel.isPlaying.value) {
+                        viewModel.resumeProgressTracking()
+                    }
                 }
             }
         })

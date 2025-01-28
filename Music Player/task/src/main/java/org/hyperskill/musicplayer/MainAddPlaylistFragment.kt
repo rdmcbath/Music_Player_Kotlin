@@ -82,6 +82,6 @@ class MainAddPlaylistFragment : Fragment() {
     }
 
     private fun showToast(message: String) {
-        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireActivity(), message, Toast.LENGTH_SHORT).show()
     }
 }

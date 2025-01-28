@@ -1,5 +1,6 @@
 package org.hyperskill.musicplayer
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -29,6 +30,7 @@ class SongListAdapter(
     fun updateSongs(newSongs: List<Song>) {
         songs = newSongs
         notifyDataSetChanged()
+        Log.d("SongListAdapter", "updateSongs called, new size: ${songs.size}")
     }
 
     override fun onViewRecycled(holder: SongViewHolder) {

@@ -3,16 +3,14 @@ package org.hyperskill.musicplayer
 import android.Manifest
 import android.app.AlertDialog
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Button
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -27,9 +25,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchButton: Button
     private val songAdapter: SongListAdapter by lazy { SongListAdapter(viewModel) }
     private val selectorAdapter: SongSelectorAdapter by lazy { SongSelectorAdapter(viewModel) }
-    val viewModel: MainViewModel by viewModels()
+    val viewModel: MainViewModel by viewModels {
+        MainViewModelFactory(this)
+    }
 
-    @RequiresApi(Build.VERSION_CODES.M)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -37,6 +36,11 @@ class MainActivity : AppCompatActivity() {
         searchButton = findViewById(R.id.mainButtonSearch)
         recyclerView = findViewById(R.id.mainSongList)
 
+        // Ensure we're in PLAY_MUSIC state initially
+        viewModel.switchToPlayMusicState()
+
+        // Setup adapters in this order:
+        viewModel.setSongListAdapter(songAdapter)  // Set adapter in ViewModel first
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = songAdapter
 
@@ -201,52 +205,48 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val permissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            viewModel.onSearchButtonClick()
-        } else {
-            Toast.makeText(this, "Songs cannot be loaded without permission", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.M)
     private fun checkAndRequestPermission() {
-        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_AUDIO
-        } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
+        val permission = Manifest.permission.READ_EXTERNAL_STORAGE
+
+        // Clear the "don't ask again" state if exists
+        if (!shouldShowRequestPermissionRationale(permission)) {
+            // This resets the "don't ask again" state
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(permission),
+                1
+            )
+            return
         }
 
-        when {
-            ContextCompat.checkSelfPermission(
-                this,
-                permission
-            ) == PackageManager.PERMISSION_GRANTED -> {
-                viewModel.onSearchButtonClick()
-            }
-            shouldShowRequestPermissionRationale(permission) -> {
-                showPermissionRationaleDialog(permission)
+        when (ContextCompat.checkSelfPermission(this, permission)) {
+            PackageManager.PERMISSION_GRANTED -> {
+                viewModel.onSearchButtonClick(this)
             }
             else -> {
-                permissionLauncher.launch(permission)
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(permission),
+                    1
+                )
             }
         }
     }
 
-    private fun showPermissionRationaleDialog(permission: String) {
-        AlertDialog.Builder(this)
-            .setTitle("Permission Required")
-            .setMessage("This permission is needed to access audio files")
-            .setPositiveButton("Grant") { dialog, _ ->
-                permissionLauncher.launch(permission)
-                dialog.dismiss()
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            1 -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    viewModel.onSearchButtonClick(this)
+                } else {
+                    Toast.makeText(this, "Songs cannot be loaded without permission", Toast.LENGTH_SHORT).show()
+                }
             }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .create()
-            .show()
+        }
     }
 }
