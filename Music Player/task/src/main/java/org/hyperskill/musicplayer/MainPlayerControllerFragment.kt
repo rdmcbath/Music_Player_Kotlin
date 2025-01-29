@@ -8,6 +8,7 @@ import android.widget.Button
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -23,6 +24,7 @@ class MainPlayerControllerFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         activity?.let {
             if (it is MainActivity) {
                 viewModel = it.viewModel
@@ -100,7 +102,7 @@ class MainPlayerControllerFragment : Fragment() {
             controllerSeekBar.progress = 0
             updateTimeDisplay(controllerTvCurrentTime, 0)
 
-            // Only update the current song's button, don't default to 0
+            // Update the current song's button
             viewModel.currentPosition.value?.let { position ->
                 viewModel.requestAdapterUpdateItemPlayPause(position)
             }
@@ -109,6 +111,8 @@ class MainPlayerControllerFragment : Fragment() {
         controllerSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
+                    controllerSeekBar.progress = progress
+                    viewModel.seekToPosition(progress)
                     updateTimeDisplay(controllerTvCurrentTime, progress)
                 }
             }

@@ -66,6 +66,16 @@ class MainViewModel(context: Context) : ViewModel() {
         _songDuration.value = 0
         _songs.value = emptyList()
         setupMediaPlayer()
+
+        mediaPlayerHelper.setOnCompletionCallback {
+            _isPlaying.value = false
+            pauseProgressTracking()
+            _currentPlaybackPosition.value = 0
+            // Update the UI - current song's play/pause image button
+            currentTrack.value?.let { song ->
+                songListAdapter.updatePlayPauseButtonState(song.id, false)
+            }
+        }
     }
 
     fun onSearchButtonClick(context: Context) {
@@ -88,6 +98,15 @@ class MainViewModel(context: Context) : ViewModel() {
             // In PLAY_MUSIC state, update the songs list
             _songs.value = songs
             songListAdapter.updateSongs(songs)
+
+            // Initialize MediaPlayer with first song if no current track
+            if (currentTrackId == null && songs.isNotEmpty()) {
+                val songToPrep = _currentTrack.value?.id ?: songs[0].id
+                val firstSong = songs[0]
+                mediaPlayerHelper.prepareMediaPlayer(firstSong.id)
+                _currentTrack.value = firstSong
+                _currentPosition.value = 0
+            }
         }
 
         // Check for "All Songs" playlist
@@ -132,13 +151,17 @@ class MainViewModel(context: Context) : ViewModel() {
         _songDuration.value = durationInMillis / 1000
     }
 
-    fun cleanupMediaPlayer() {
-        mediaPlayerHelper.cleanupMediaPlayer()
+    fun isMediaPlayerPrepared(): Boolean {
+        return mediaPlayerHelper.isPrepared()
     }
 
-    fun seekToPosition(positionInSeconds: Int) {
-        mediaPlayerHelper.seekTo(positionInSeconds)
-        _currentPlaybackPosition.value = positionInSeconds
+    fun isMediaPlayerInitialized(): Boolean {
+        return mediaPlayerHelper.isInitialized()
+    }
+
+    fun seekToPosition(position: Int) {
+            mediaPlayerHelper.seekTo(position)
+            _currentPlaybackPosition.value = position
     }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -189,8 +212,13 @@ class MainViewModel(context: Context) : ViewModel() {
                     _currentTrack.value = selectedSong
 
                     setupMediaPlayer()
+                    // Use the stored position when starting
+                    val currentPos = _currentPlaybackPosition.value
                     mediaPlayerHelper.startMediaPlayer(selectedSong.id)
                     _currentPlaybackPosition.value = mediaPlayerHelper.getCurrentPosition()
+                    if (currentPos > 0) {
+                        mediaPlayerHelper.seekTo(currentPos)
+                    }
                     startProgressTracking()
 
                     previousTrackId?.let { prevId ->

@@ -12,11 +12,28 @@ class MediaPlayerHelper(private val context: Context) {
     private var onCompletionListener: (() -> Unit)? = null
     private var currentSongId: Int? = null
     private var lastPosition: Int = 0
+    private var isPrepared: Boolean = false
 
+    fun isPrepared(): Boolean = isPrepared
+
+    fun isInitialized(): Boolean = mediaPlayer != null && isPrepared
+
+    // Make sure this is called whenever we create a new MediaPlayer instance
     fun setupMediaPlayer() {
         if (mediaPlayer == null) {
             try {
                 mediaPlayer = MediaPlayer()
+                // Re-register the completion listener for the new instance
+                onCompletionListener?.let { callback ->
+                    mediaPlayer?.setOnCompletionListener {
+                        mediaPlayer?.stop()
+                        mediaPlayer?.reset()
+                        isPrepared = false
+                        currentSongId = null
+                        lastPosition = 0
+                        callback.invoke()
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("MediaPlayerHelper", "Error setting up media player", e)
             }
@@ -32,19 +49,17 @@ class MediaPlayerHelper(private val context: Context) {
             release()
         }
         mediaPlayer = null
+        currentSongId = null
+        lastPosition = 0
+        isPrepared = false  // Reset prepared state
     }
 
-    fun startMediaPlayer(songId: Int) {
+    fun prepareMediaPlayer(songId: Int) {
         try {
-            if (songId == currentSongId && mediaPlayer?.isPlaying == false) {
-                // Resume playback of the same song
-                lastPosition = mediaPlayer?.currentPosition ?: 0
-                mediaPlayer?.start()
-                mediaPlayer?.seekTo(lastPosition)
-                return
+            if (mediaPlayer == null) {
+                setupMediaPlayer()
             }
 
-            // Get songUri using ContentUris as specified
             val songUri = ContentUris.withAppendedId(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                 songId.toLong()
@@ -52,11 +67,56 @@ class MediaPlayerHelper(private val context: Context) {
 
             mediaPlayer?.apply {
                 reset()
+                isPrepared = false
                 setDataSource(context, songUri)
                 prepare()
-                start()
+                isPrepared = true
+                // Don't start playback, but do seek to lastPosition if it exists
+                if (lastPosition > 0) {
+                    seekTo(lastPosition)
+                }
+            }
+            currentSongId = songId
+        } catch (e: Exception) {
+            Log.e("MediaPlayerHelper", "Error preparing media player", e)
+            resetMediaPlayer()
+        }
+    }
+
+    fun startMediaPlayer(songId: Int) {
+        try {
+            if (mediaPlayer == null) {
+                setupMediaPlayer()
             }
 
+            if (songId == currentSongId && mediaPlayer?.isPlaying == false && isPrepared) {
+                // Resume playback of the same song
+                lastPosition = mediaPlayer?.currentPosition ?: 0
+                mediaPlayer?.start()
+                mediaPlayer?.seekTo(lastPosition)
+                return
+            }
+
+            // New song or first play
+            val songUri = ContentUris.withAppendedId(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                songId.toLong()
+            )
+
+            mediaPlayer?.apply {
+                reset()
+                isPrepared = false
+                setDataSource(context, songUri)
+                setOnCompletionListener {
+                    stop()
+                    reset()
+                    isPrepared = false
+                    onCompletionListener?.invoke()
+                }
+                prepare()
+                isPrepared = true
+                start()
+            }
             currentSongId = songId
             lastPosition = 0
         } catch (e: Exception) {
@@ -77,42 +137,65 @@ class MediaPlayerHelper(private val context: Context) {
         try {
             mediaPlayer?.stop()
             mediaPlayer?.reset()
+            isPrepared = false
+            currentSongId = null
+            lastPosition = 0
         } catch (e: Exception) {
             Log.e("MediaPlayerHelper", "Error stopping media player", e)
         }
     }
 
-    fun resetMediaPlayer() {
+        fun resetMediaPlayer() {
         mediaPlayer?.reset()
+        currentSongId = null
+        lastPosition = 0
+        isPrepared = false  // Reset prepared state
     }
-
-    fun isInitialized(): Boolean = mediaPlayer != null
 
     fun getCurrentPosition(): Int {
         return try {
-            (mediaPlayer?.currentPosition ?: 0) / 1000
+            // Always return lastPosition if we're not playing
+            if (mediaPlayer?.isPlaying == true && isPrepared) {
+                mediaPlayer?.currentPosition?.div(1000) ?: (lastPosition / 1000)
+            } else {
+                lastPosition / 1000
+            }
         } catch (e: Exception) {
             Log.e("MediaPlayerHelper", "Error getting position", e)
-            0
+            lastPosition / 1000
         }
     }
 
     fun getDuration(): Int {
         return try {
-            mediaPlayer?.duration ?: 0
+            if (isPrepared) {
+                mediaPlayer?.duration ?: 215_000  // Return default only if prepared but null
+            } else {
+                215_000  // Return default duration when not prepared
+            }
         } catch (e: Exception) {
             Log.e("MediaPlayerHelper", "Error getting duration", e)
-            215_000  // Default to our test duration on error
+            215_000
         }
     }
 
     fun seekTo(positionInSeconds: Int) {
-        mediaPlayer?.seekTo(positionInSeconds * 1000)
+        lastPosition = positionInSeconds * 1000
+        if (isPrepared) {
+            mediaPlayer?.seekTo(lastPosition)
+        }
     }
 
     fun setOnCompletionCallback(callback: () -> Unit) {
         onCompletionListener = callback
-        mediaPlayer?.setOnCompletionListener { onCompletionListener?.invoke() }
+        mediaPlayer?.setOnCompletionListener {
+            mediaPlayer?.stop()  // Make sure to stop
+            mediaPlayer?.reset() // Reset the player
+            isPrepared = false   // Mark as not prepared
+            currentSongId = null // Clear current song
+            lastPosition = 0     // Reset position
+            callback.invoke()    // Call the callback after cleanup
+        }
     }
 
     fun isTestEnvironment(): Boolean {

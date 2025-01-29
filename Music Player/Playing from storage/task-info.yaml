@@ -145,10 +145,8 @@ files:
 feedback_link: https://hyperskill.org/learn/step/22742#comment
 status: Failed
 feedback:
-  message: "After initial click on mainButtonSearch and changing controllerSeekBar\
-    \ progress as user before playing a song the application should not crash. Make\
-    \ sure to have a song already loaded. Failed with java.lang.NullPointerException:\
-    \ Cannot read field &quot;duration&quot; because the return value of &quot;org.robolectric.shadows.ShadowMediaPlayer.getMediaInfo()&quot;\
-    \ is null"
-  time: "Wed, 29 Jan 2025 13:58:20 UTC"
+  message: "After changing controllerSeekBar progress as user with a stopped song\
+    \ the mediaPlayer should update its currentPosition and remain paused. On mediaPlayer\
+    \ currentPosition expected: 100000 found: 0"
+  time: "Wed, 29 Jan 2025 17:20:05 UTC"
 record: -1
