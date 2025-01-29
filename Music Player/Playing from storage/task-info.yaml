@@ -145,8 +145,10 @@ files:
 feedback_link: https://hyperskill.org/learn/step/22742#comment
 status: Failed
 feedback:
-  message: on init after clicking on mainButtonSearch Incorrect number of list items
-  time: "Tue, 28 Jan 2025 19:49:02 UTC"
-  expected: 10
-  actual: 0
+  message: "After initial click on mainButtonSearch and changing controllerSeekBar\
+    \ progress as user before playing a song the application should not crash. Make\
+    \ sure to have a song already loaded. Failed with java.lang.NullPointerException:\
+    \ Cannot read field &quot;duration&quot; because the return value of &quot;org.robolectric.shadows.ShadowMediaPlayer.getMediaInfo()&quot;\
+    \ is null"
+  time: "Wed, 29 Jan 2025 13:58:20 UTC"
 record: -1

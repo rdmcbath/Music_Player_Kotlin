@@ -10,13 +10,16 @@ import android.util.Log
 class MediaPlayerHelper(private val context: Context) {
     private var mediaPlayer: MediaPlayer? = null
     private var onCompletionListener: (() -> Unit)? = null
+    private var currentSongId: Int? = null
+    private var lastPosition: Int = 0
 
     fun setupMediaPlayer() {
-        cleanupMediaPlayer()
-        try {
-            mediaPlayer = MediaPlayer()
-        } catch (e: Exception) {
-            Log.e("MediaPlayerHelper", "Error setting up media player", e)
+        if (mediaPlayer == null) {
+            try {
+                mediaPlayer = MediaPlayer()
+            } catch (e: Exception) {
+                Log.e("MediaPlayerHelper", "Error setting up media player", e)
+            }
         }
     }
 
@@ -33,6 +36,14 @@ class MediaPlayerHelper(private val context: Context) {
 
     fun startMediaPlayer(songId: Int) {
         try {
+            if (songId == currentSongId && mediaPlayer?.isPlaying == false) {
+                // Resume playback of the same song
+                lastPosition = mediaPlayer?.currentPosition ?: 0
+                mediaPlayer?.start()
+                mediaPlayer?.seekTo(lastPosition)
+                return
+            }
+
             // Get songUri using ContentUris as specified
             val songUri = ContentUris.withAppendedId(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
@@ -45,6 +56,9 @@ class MediaPlayerHelper(private val context: Context) {
                 prepare()
                 start()
             }
+
+            currentSongId = songId
+            lastPosition = 0
         } catch (e: Exception) {
             Log.e("MediaPlayerHelper", "Error starting media player", e)
             resetMediaPlayer()

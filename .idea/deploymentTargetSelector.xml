@@ -4,7 +4,7 @@
     <selectionStates>
       <SelectionState runConfigName="Music_Player-task">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-01-28T17:08:44.098069800Z">
+        <DropdownSelection timestamp="2025-01-29T13:19:33.850793500Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\rdmcb\.android\avd\Pixel_7_API_32.avd" />

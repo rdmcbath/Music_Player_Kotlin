@@ -69,18 +69,26 @@ class MainViewModel(context: Context) : ViewModel() {
     }
 
     fun onSearchButtonClick(context: Context) {
-        Log.d("MainViewModel", "onSearchButtonClick called")
         val songs = getDeviceSongs(context)
-        Log.d("MainViewModel", "Songs created: ${songs.size}")
 
         // Save current states before updating
         val wasPlaying = _isPlaying.value
         val currentTrackId = _currentTrack.value?.id
 
-        // Update songs
-        _songs.value = songs
-        songListAdapter.updateSongs(songs)
-        Log.d("MainViewModel", "After adapter update: ${songListAdapter.songs.size}")
+        if (_playerState.value == PlayerState.ADD_PLAYLIST) {
+            // In ADD_PLAYLIST state, show all songs for selection
+            _songSelectors.value = songs.map { song ->
+                SongSelector(
+                    song = song,
+                    isSelected = _isSelectedMap.value[song.id] ?: false
+                )
+            }
+            selectorAdapter.updateSongs(_songSelectors.value)
+        } else {
+            // In PLAY_MUSIC state, update the songs list
+            _songs.value = songs
+            songListAdapter.updateSongs(songs)
+        }
 
         // Check for "All Songs" playlist
         val allSongsPlaylist = _playlists.value.find { it.name == "All Songs" }
@@ -91,16 +99,20 @@ class MainViewModel(context: Context) : ViewModel() {
                 songs = songs
             )
             _playlists.value = listOf(newAllSongsPlaylist)
-            _currentPlaylist.value = newAllSongsPlaylist
-        }
 
-        // Restore the current track position if it exists in the new song list
-        currentTrackId?.let { id ->
-            val newPosition = songs.indexOfFirst { it.id == id }
-            if (newPosition != -1) {
-                _currentPosition.value = newPosition
-                _currentTrack.value = songs[newPosition]
-                _isPlaying.value = wasPlaying
+            // Only update current playlist in PLAY_MUSIC state
+            if (_playerState.value == PlayerState.PLAY_MUSIC) {
+                _currentPlaylist.value = newAllSongsPlaylist
+
+                // Restore the current track position if it exists in the new song list
+                currentTrackId?.let { id ->
+                    val newPosition = songs.indexOfFirst { it.id == id }
+                    if (newPosition != -1) {
+                        _currentPosition.value = newPosition
+                        _currentTrack.value = songs[newPosition]
+                        _isPlaying.value = wasPlaying
+                    }
+                }
             }
         }
     }
@@ -120,6 +132,10 @@ class MainViewModel(context: Context) : ViewModel() {
         _songDuration.value = durationInMillis / 1000
     }
 
+    fun cleanupMediaPlayer() {
+        mediaPlayerHelper.cleanupMediaPlayer()
+    }
+
     fun seekToPosition(positionInSeconds: Int) {
         mediaPlayerHelper.seekTo(positionInSeconds)
         _currentPlaybackPosition.value = positionInSeconds
@@ -133,7 +149,7 @@ class MainViewModel(context: Context) : ViewModel() {
                 _currentPlaybackPosition.value = currentPositionInSeconds
 
                 // Schedule next update
-                handler.postDelayed(this, 100)
+                handler.postDelayed(this, 200)
             }
         }
     }
@@ -166,43 +182,37 @@ class MainViewModel(context: Context) : ViewModel() {
         when {
             selectedSong != currentTrack.value || !mediaPlayerHelper.isInitialized() -> {
                 try {
+                    _isPlaying.value = true
                     mediaPlayerHelper.cleanupMediaPlayer()
 
                     previousTrackId = currentTrack.value?.id
                     _currentTrack.value = selectedSong
-                    _isPlaying.value = true
 
                     setupMediaPlayer()
                     mediaPlayerHelper.startMediaPlayer(selectedSong.id)
+                    _currentPlaybackPosition.value = mediaPlayerHelper.getCurrentPosition()
+                    startProgressTracking()
 
                     previousTrackId?.let { prevId ->
                         songListAdapter.updateCurrentTrack(selectedSong, prevId)
                     }
-
-                    startProgressTracking()
                 } catch (e: Exception) {
                     mediaPlayerHelper.resetMediaPlayer()
                 }
             }
+
             selectedSong == currentTrack.value -> {
                 _isPlaying.value = !isPlaying.value
 
-                selectedSong.id.let { currentId ->
-                    songListAdapter.updateCurrentTrack(selectedSong, currentId)
+                if (_isPlaying.value) {
+                    mediaPlayerHelper.startMediaPlayer(selectedSong.id)
+                    startProgressTracking()
+                } else {
+                    mediaPlayerHelper.pauseMediaPlayer()
+                    pauseProgressTracking()
                 }
 
-                try {
-                    if (_isPlaying.value) {
-                        mediaPlayerHelper.startMediaPlayer(selectedSong.id)
-                        seekToPosition(currentPlaybackPosition.value)
-                        startProgressTracking()
-                    } else {
-                        mediaPlayerHelper.pauseMediaPlayer()
-                        pauseProgressTracking()
-                    }
-                } catch (e: Exception) {
-                    mediaPlayerHelper.resetMediaPlayer()
-                }
+                songListAdapter.updateCurrentTrack(selectedSong, selectedSong.id)
             }
         }
     }
@@ -228,6 +238,7 @@ class MainViewModel(context: Context) : ViewModel() {
     fun switchToPlayMusicState(clearSelections: Boolean = true) {
         _playerState.value = PlayerState.PLAY_MUSIC
         _songs.value = _currentPlaylist.value?.songs ?: emptyList()
+        songListAdapter.updateSongs(_songs.value)
 
         if (clearSelections) {
             _isSelectedMap.value = emptyMap()
@@ -296,7 +307,7 @@ class MainViewModel(context: Context) : ViewModel() {
         _currentTrack.value = currentTrackValue
         _songs.value = currentSongs
 
-        switchToPlayMusicState()
+        switchToPlayMusicState(clearSelections = false)
     }
 
     fun setCurrentPlaylist(playlist: Playlist) {
@@ -323,12 +334,18 @@ class MainViewModel(context: Context) : ViewModel() {
                     pauseProgressTracking()
                 }
             } else {
+                // For a new track, properly initialize everything
+                val newTrack = it.songs.first()
                 _currentPosition.value = 0
-                _currentTrack.value = it.songs.first()
+                _currentTrack.value = newTrack
                 _isPlaying.value = false
-                mediaPlayerHelper.pauseMediaPlayer()
-                mediaPlayerHelper.seekTo(0)  // Explicitly seek to 0
-                _currentPlaybackPosition.value = 0  // Reset the seekbar position
+
+                mediaPlayerHelper.cleanupMediaPlayer()
+                setupMediaPlayer()
+                mediaPlayerHelper.startMediaPlayer(newTrack.id)  // Initialize with new track
+                mediaPlayerHelper.pauseMediaPlayer()  // Immediately pause since isPlaying is false
+                mediaPlayerHelper.seekTo(0)
+                _currentPlaybackPosition.value = 0
                 pauseProgressTracking()
             }
             requestAdapterUpdateItemPlayPause(_currentPosition.value ?: 0)

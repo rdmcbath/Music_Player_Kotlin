@@ -36,16 +36,16 @@ class MainActivity : AppCompatActivity() {
         searchButton = findViewById(R.id.mainButtonSearch)
         recyclerView = findViewById(R.id.mainSongList)
 
-        // Ensure we're in PLAY_MUSIC state initially
-        viewModel.switchToPlayMusicState()
-
-        // Setup adapters in this order:
-        viewModel.setSongListAdapter(songAdapter)  // Set adapter in ViewModel first
+        viewModel.setSongListAdapter(songAdapter)
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = songAdapter
 
+        // Ensure we're in PLAY_MUSIC state initially
+        viewModel.switchToPlayMusicState()
+
         searchButton.setOnClickListener {
-            checkAndRequestPermission()
+//            checkAndRequestPermission()
+            viewModel.onSearchButtonClick(this)
         }
 
         setupPlayerStateObserver()
