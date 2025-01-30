@@ -3,6 +3,7 @@ package org.hyperskill.musicplayer
 import android.Manifest
 import android.app.AlertDialog
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -11,7 +12,7 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
+import androidx.core.content.PermissionChecker
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -19,6 +20,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import org.hyperskill.musicplayer.adapter.SongListAdapter
+import org.hyperskill.musicplayer.adapter.SongSelectorAdapter
 
 class MainActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
@@ -44,8 +47,11 @@ class MainActivity : AppCompatActivity() {
         viewModel.switchToPlayMusicState()
 
         searchButton.setOnClickListener {
-//            checkAndRequestPermission()
-            viewModel.onSearchButtonClick(this)
+            if (!isPermissionGranted()) {
+                requestForPermission()
+            } else {
+                viewModel.onSearchButtonClick(this)
+            }
         }
 
         setupPlayerStateObserver()
@@ -205,48 +211,52 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkAndRequestPermission() {
-        val permission = Manifest.permission.READ_EXTERNAL_STORAGE
+    private fun isPermissionGranted(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            this.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        } else {
+            PermissionChecker.checkSelfPermission(
+                this,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == PermissionChecker.PERMISSION_GRANTED
+        }
+    }
 
-        // Clear the "don't ask again" state if exists
-        if (!shouldShowRequestPermissionRationale(permission)) {
-            // This resets the "don't ask again" state
+    private fun requestForPermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(
+                this,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            )
+        ) {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(permission),
-                1
+                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                PERMISSION_REQUEST_CODE,
             )
-            return
-        }
-
-        when (ContextCompat.checkSelfPermission(this, permission)) {
-            PackageManager.PERMISSION_GRANTED -> {
-                viewModel.onSearchButtonClick(this)
-            }
-            else -> {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(permission),
-                    1
-                )
-            }
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                PERMISSION_REQUEST_CODE,
+            )
         }
     }
 
     override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            1 -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    viewModel.onSearchButtonClick(this)
-                } else {
-                    Toast.makeText(this, "Songs cannot be loaded without permission", Toast.LENGTH_SHORT).show()
-                }
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                viewModel.onSearchButtonClick(this)
+            } else {
+                Toast.makeText(this, "Songs cannot be loaded without permission", Toast.LENGTH_LONG)
+                    .show()
             }
         }
+    }
+
+    companion object {
+        private const val PERMISSION_REQUEST_CODE = 1
     }
 }
