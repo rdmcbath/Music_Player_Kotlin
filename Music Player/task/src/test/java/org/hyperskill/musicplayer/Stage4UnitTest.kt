@@ -2,6 +2,7 @@ package org.hyperskill.musicplayer
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import org.hyperskill.musicplayer.internals.CustomMediaPlayerShadow
 import org.hyperskill.musicplayer.internals.CustomShadowAsyncDifferConfig
 import org.hyperskill.musicplayer.internals.CustomShadowCountDownTimer
@@ -20,8 +21,12 @@ import org.robolectric.annotation.Config
 import java.time.Duration
 
 // version 2.0
+// Future maintainer: Update later sdk to match project's targetSdkVersion
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Config(shadows = [CustomMediaPlayerShadow::class, CustomShadowCountDownTimer::class, CustomShadowAsyncDifferConfig::class])
+@Config(
+    sdk = [Build.VERSION_CODES.S_V2, Build.VERSION_CODES.UPSIDE_DOWN_CAKE],
+    shadows = [CustomMediaPlayerShadow::class, CustomShadowCountDownTimer::class, CustomShadowAsyncDifferConfig::class]
+)
 @RunWith(RobolectricTestRunner::class)
 class Stage4UnitTest : MusicPlayerUnitTests<MainActivity>(MainActivity::class.java) {
 
@@ -45,17 +50,19 @@ class Stage4UnitTest : MusicPlayerUnitTests<MainActivity>(MainActivity::class.ja
         testActivity {
             PlayMusicScreen(this).apply {
                 mainButtonSearch.clickAndRun()
-                assertRequestPermissions(listOf(Manifest.permission.READ_EXTERNAL_STORAGE))
+                assertRequestPermissions(
+                    listOf(audioPermission),
+                    additionalMessage = additionalRequiredPermissionMsg
+                )
 
                 // grant permissions and invoke listener
-                shadowActivity.grantPermissions(Manifest.permission.READ_EXTERNAL_STORAGE)
+                shadowActivity.grantPermissions(audioPermission)
                 activity.onRequestPermissionsResult(
                     expectedRequestCode,
-                    arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                    arrayOf(audioPermission),
                     intArrayOf(PackageManager.PERMISSION_GRANTED)
                 )
                 shadowLooper.idleFor(Duration.ofSeconds(3))
-                //
 
                 mainSongList.assertListItems(fakeSongResult) { itemViewSupplier, position, song ->
                     assertSongItem(
@@ -74,15 +81,18 @@ class Stage4UnitTest : MusicPlayerUnitTests<MainActivity>(MainActivity::class.ja
 
         testActivity {
             PlayMusicScreen(this).apply {
-                FakeContentProvider.hasPermissionToReadExternalStorage = false
+                FakeContentProvider.hasPermissionToReadAudio = false
                 mainButtonSearch.clickAndRun()
 
-                assertRequestPermissions(listOf(Manifest.permission.READ_EXTERNAL_STORAGE))
+                assertRequestPermissions(
+                    listOf(audioPermission),
+                    additionalMessage = additionalRequiredPermissionMsg
+                )
 
-                shadowActivity.denyPermissions(Manifest.permission.READ_EXTERNAL_STORAGE)
+                shadowActivity.denyPermissions(audioPermission)
                 activity.onRequestPermissionsResult(
                     expectedRequestCode,
-                    arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                    arrayOf(audioPermission),
                     intArrayOf(PackageManager.PERMISSION_DENIED)
                 )
                 shadowLooper.idleFor(Duration.ofSeconds(3))
@@ -101,15 +111,18 @@ class Stage4UnitTest : MusicPlayerUnitTests<MainActivity>(MainActivity::class.ja
         testActivity {
             PlayMusicScreen(this).apply {
 
-                FakeContentProvider.hasPermissionToReadExternalStorage = false
+                FakeContentProvider.hasPermissionToReadAudio = false
                 mainButtonSearch.clickAndRun()
 
-                assertRequestPermissions(listOf(Manifest.permission.READ_EXTERNAL_STORAGE))
+                assertRequestPermissions(
+                    listOf(audioPermission),
+                    additionalMessage = additionalRequiredPermissionMsg
+                )
 
-                shadowActivity.denyPermissions(Manifest.permission.READ_EXTERNAL_STORAGE)
+                shadowActivity.denyPermissions(audioPermission)
                 activity.onRequestPermissionsResult(
                     expectedRequestCode,
-                    arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                    arrayOf(audioPermission),
                     intArrayOf(PackageManager.PERMISSION_DENIED)
                 )
                 shadowLooper.idleFor(Duration.ofSeconds(3))
@@ -132,28 +145,33 @@ class Stage4UnitTest : MusicPlayerUnitTests<MainActivity>(MainActivity::class.ja
         testActivity {
             PlayMusicScreen(this).apply {
 
-                FakeContentProvider.hasPermissionToReadExternalStorage = false
+                FakeContentProvider.hasPermissionToReadAudio = false
                 mainButtonSearch.clickAndRun()
 
-                assertRequestPermissions(listOf(Manifest.permission.READ_EXTERNAL_STORAGE))
-
-                shadowActivity.denyPermissions(Manifest.permission.READ_EXTERNAL_STORAGE)
+                assertRequestPermissions(
+                    listOf(audioPermission),
+                    additionalMessage = additionalRequiredPermissionMsg
+                )
+                shadowActivity.denyPermissions(audioPermission)
                 activity.onRequestPermissionsResult(
                     expectedRequestCode,
-                    arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                    arrayOf(audioPermission),
                     intArrayOf(PackageManager.PERMISSION_DENIED)
                 )
                 shadowLooper.runToEndOfTasks()
 
                 mainSongList.assertListItems(listOf<SongFake>()) { _, _, _ -> /*implicitSizeAssertion*/ }
 
-                FakeContentProvider.hasPermissionToReadExternalStorage = true
+                FakeContentProvider.hasPermissionToReadAudio = true
                 mainButtonSearch.clickAndRun()
-                assertRequestPermissions(listOf(Manifest.permission.READ_EXTERNAL_STORAGE))
-                shadowActivity.grantPermissions(Manifest.permission.READ_EXTERNAL_STORAGE)
+                assertRequestPermissions(
+                    listOf(audioPermission),
+                    additionalMessage = additionalRequiredPermissionMsg
+                )
+                shadowActivity.grantPermissions(audioPermission)
                 activity.onRequestPermissionsResult(
                     expectedRequestCode,
-                    arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                    arrayOf(audioPermission),
                     intArrayOf(PackageManager.PERMISSION_GRANTED)
                 )
                 shadowLooper.runToEndOfTasks()
@@ -170,7 +188,7 @@ class Stage4UnitTest : MusicPlayerUnitTests<MainActivity>(MainActivity::class.ja
 
     @Test
     fun test04_testMusicFilesRetrievalAllFiles() {
-        shadowActivity.grantPermissions(Manifest.permission.READ_EXTERNAL_STORAGE)
+        shadowActivity.grantPermissions(audioPermission)
         val fakeSongResult = SongFakeRepository.fakeSongData
         setupContentProvider(fakeSongResult)
         CustomMediaPlayerShadow.setFakeSong(fakeSongResult.first())
@@ -190,7 +208,7 @@ class Stage4UnitTest : MusicPlayerUnitTests<MainActivity>(MainActivity::class.ja
 
     @Test
     fun test05_testMusicFilesRetrievalNoFiles() {
-        shadowActivity.grantPermissions(Manifest.permission.READ_EXTERNAL_STORAGE)
+        shadowActivity.grantPermissions(audioPermission)
         val fakeSongResult = listOf<SongFake>()
         setupContentProvider(fakeSongResult)
 
@@ -203,6 +221,16 @@ class Stage4UnitTest : MusicPlayerUnitTests<MainActivity>(MainActivity::class.ja
 
     @After
     fun tearDown() {
-        FakeContentProvider.hasPermissionToReadExternalStorage = true
+        FakeContentProvider.hasPermissionToReadAudio = true
     }
+
+    private val audioPermission: String
+        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_AUDIO
+        } else Manifest.permission.READ_EXTERNAL_STORAGE
+
+    private val additionalRequiredPermissionMsg: String
+        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            "for Android 13 and higher?"
+        } else "for Android 12 and lower?"
 }

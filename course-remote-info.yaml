@@ -4,7 +4,7 @@ hyperskill_project:
   is_template_based: false
   use_ide: true
   environment: android
-update_date: "Wed, 29 Jan 2025 12:57:33 UTC"
+update_date: "Mon, 17 Feb 2025 17:04:15 UTC"
 stages:
   - id: 1506
     step: 22739
@@ -17,10 +17,10 @@ stages:
     is_completed: true
   - id: 1509
     step: 22742
-    is_completed: false
+    is_completed: true
   - id: 1510
     step: 22743
-    is_completed: false
+    is_completed: true
 topics:
   0:
     - title: Data structures
@@ -53,14 +53,14 @@ topics:
       theory_id: 5252
     - title: Fragments
       theory_id: 12981
+    - title: What is object-oriented programming
+      theory_id: 3614
     - title: Build tools
       theory_id: 4284
     - title: "Gradle: overview"
       theory_id: 5075
     - title: External resources
       theory_id: 6216
-    - title: What is object-oriented programming
-      theory_id: 3614
     - title: Concept of design patterns
       theory_id: 3611
     - title: Android studio basics
@@ -198,6 +198,8 @@ topics:
       theory_id: 4659
     - title: Objects and their properties
       theory_id: 11233
+    - title: Declaring classes
+      theory_id: 6200
     - title: Structural vs referential equality
       theory_id: 11236
     - title: Unicode
@@ -214,14 +216,12 @@ topics:
       theory_id: 4637
     - title: Named arguments
       theory_id: 4640
-    - title: For loop and ranges
-      theory_id: 4652
-    - title: Declaring classes
-      theory_id: 6200
     - title: Constructors
       theory_id: 10740
     - title: Member functions
       theory_id: 6364
+    - title: For loop and ranges
+      theory_id: 4652
     - title: What are bugs
       theory_id: 5504
     - title: Functional testing

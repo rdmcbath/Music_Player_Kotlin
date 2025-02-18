@@ -1,87 +1,63 @@
 package org.hyperskill.musicplayer
 
+import android.content.Context
 import android.os.Bundle
+import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
-import android.widget.Toast
-import androidx.fragment.app.Fragment
-import java.util.UUID
 
 class MainAddPlaylistFragment : Fragment() {
-    private lateinit var viewModel: MainViewModel
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        activity?.let {
-            if (it is MainActivity) {
-                viewModel = it.viewModel
-            }
-        } ?: throw IllegalStateException("Fragment must be attached to MainActivity")
-    }
+    private lateinit var addPlaylistEtPlaylistName: EditText
+
+    private lateinit var addPlaylistBtnCancel: Button
+    private lateinit var addPlaylistBtnOk: Button
+
+    private lateinit var listener: OnMainAddPlaylistFragmentButtonsClicksListener
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
+        inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
+    ): View? {
         return inflater.inflate(R.layout.fragment_main_add_playlist, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setupListeners()
+        addPlaylistEtPlaylistName = view.findViewById(R.id.addPlaylistEtPlaylistName)
+
+        addPlaylistBtnCancel = view.findViewById(R.id.addPlaylistBtnCancel)
+        addPlaylistBtnOk = view.findViewById(R.id.addPlaylistBtnOk)
+
+        setButtonsListeners()
     }
 
-    private fun setupListeners() {
-        view?.let { fragmentView ->
-            fragmentView.findViewById<Button>(R.id.addPlaylistBtnCancel).setOnClickListener {
-                viewModel.switchToPlayMusicState()
-            }
-
-            fragmentView.findViewById<Button>(R.id.addPlaylistBtnOk).setOnClickListener {
-                val playlistNameEditText =
-                    view?.findViewById<EditText>(R.id.addPlaylistEtPlaylistName)
-                if (playlistNameEditText != null) {
-                    handleOkButtonClick(playlistNameEditText)
-                }
-            }
-
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        try {
+            listener = context as OnMainAddPlaylistFragmentButtonsClicksListener
+        } catch (ex: ClassCastException) {
+            throw ClassCastException("${context.toString()} " +
+                    "must implement MainAddPlaylistFragment.OnMainAddPlaylistFragmentButtonsClicksListener")
         }
     }
 
-    private fun handleOkButtonClick(editText: EditText) {
-        val playlistName = editText.text.toString().trim()
-        val selectedSongs = viewModel.selectedSongs.value
+    private fun setButtonsListeners() {
+        addPlaylistBtnCancel.setOnClickListener {
+            listener.onAddPlaylistBtnCancelButtonClick()
+        }
 
-        when {
-            playlistName.equals("All Songs", ignoreCase = true) -> {
-                showToast("All Songs is a reserved name choose another playlist name")
-            }
-            selectedSongs.isEmpty() -> {
-                showToast("Add at least one song to your playlist")
-            }
-
-            playlistName.isBlank() -> {
-                showToast("Add a name to your playlist")
-            }
-
-            else -> {
-                // Create new playlist with selected songs
-                val newPlaylist = Playlist(
-                    id = UUID.randomUUID().toString(),
-                    name = playlistName,
-                    songs = selectedSongs
-                )
-                viewModel.addPlaylist(newPlaylist)
-            }
+        addPlaylistBtnOk.setOnClickListener {
+            listener.onAddPlaylistBtnOkButtonClick(addPlaylistEtPlaylistName.text.toString())
         }
     }
 
-    private fun showToast(message: String) {
-        Toast.makeText(requireActivity(), message, Toast.LENGTH_SHORT).show()
+    interface OnMainAddPlaylistFragmentButtonsClicksListener {
+        fun onAddPlaylistBtnCancelButtonClick()
+        fun onAddPlaylistBtnOkButtonClick(playlistName: String)
     }
 }

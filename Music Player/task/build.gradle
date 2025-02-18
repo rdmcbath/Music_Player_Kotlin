@@ -2,14 +2,14 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
 android {
-  compileSdk 35
+  compileSdk hs.android.compileSdkVersion
   namespace "org.hyperskill.musicplayer"
 
   defaultConfig {
 
     applicationId "org.hyperskill.musicplayer"
-    minSdk 23
-    targetSdk 34
+    minSdkVersion hs.android.minSdkVersion
+    targetSdkVersion hs.android.targetSdkVersion
     versionCode 1
     versionName '1.0'
   }
@@ -19,12 +19,14 @@ android {
   }
 
   compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
-    }
-    kotlinOptions {
-        jvmTarget = '11'
-    }
+    sourceCompatibility JavaVersion.VERSION_11
+    targetCompatibility JavaVersion.VERSION_11
+  }
+
+  kotlinOptions {
+    jvmTarget = '11'
+  }
+
 }
 
 dependencies {
@@ -43,12 +45,6 @@ dependencies {
   def material = hs.android.lib.material
   implementation "com.google.android.material:material:$material"
 
-  def lifecycle_version = "2.6.2"
-  implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
-
-  def fragment_version = "1.6.2"
-  implementation "androidx.fragment:fragment-ktx:$fragment_version"
-
-  implementation "androidx.activity:activity-ktx:1.8.2"
-
-  }
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.0")
+}

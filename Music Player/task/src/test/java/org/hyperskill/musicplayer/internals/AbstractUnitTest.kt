@@ -37,7 +37,7 @@ abstract class AbstractUnitTest<T : Activity>(clazz: Class<T>) {
      *
      * It is the @RealObject of the shadowActivity
      */
-    val activity : Activity by lazy {
+    val activity: Activity by lazy {
         activityController.get()
     }
 
@@ -109,7 +109,7 @@ abstract class AbstractUnitTest<T : Activity>(clazz: Class<T>) {
         val maybeView: View? = this.findViewById(id)
 
         val (expectedClass, maybeActualClass) =
-            if(T::class.java.simpleName == maybeView?.javaClass?.simpleName) {
+            if (T::class.java.simpleName == maybeView?.javaClass?.simpleName) {
                 T::class.java.canonicalName to maybeView?.javaClass?.canonicalName
             } else {
                 T::class.java.simpleName to maybeView?.javaClass?.simpleName
@@ -134,7 +134,7 @@ abstract class AbstractUnitTest<T : Activity>(clazz: Class<T>) {
         val maybeView: View? = this.findViewById(id)
 
         val (expectedClass, maybeActualClass) =
-            if(T::class.java.simpleName == maybeView?.javaClass?.simpleName) {
+            if (T::class.java.simpleName == maybeView?.javaClass?.simpleName) {
                 T::class.java.canonicalName to maybeView?.javaClass?.canonicalName
             } else {
                 T::class.java.simpleName to maybeView?.javaClass?.simpleName
@@ -207,7 +207,7 @@ abstract class AbstractUnitTest<T : Activity>(clazz: Class<T>) {
      * Asserts that the last message toasted is the expectedMessage.
      * Assertion fails if no toast is shown with null actualLastMessage value.
      */
-    fun assertLastToastMessageEquals(errorMessage: String, expectedMessage: String,) {
+    fun assertLastToastMessageEquals(errorMessage: String, expectedMessage: String) {
         val actualLastMessage: String? = ShadowToast.getTextOfLatestToast()
         Assert.assertEquals(errorMessage, expectedMessage, actualLastMessage)
     }
@@ -221,13 +221,16 @@ abstract class AbstractUnitTest<T : Activity>(clazz: Class<T>) {
      */
     fun SeekBar.setProgressAsUser(progress: Int) {
         val shadowSeekBar = shadowOf(this)
-        assertNotNull("Expected seekbar to have a onSeekBarChangeListener", shadowSeekBar.onSeekBarChangeListener)
+        assertNotNull(
+            "Expected seekbar to have a onSeekBarChangeListener",
+            shadowSeekBar.onSeekBarChangeListener
+        )
 
         shadowSeekBar.onSeekBarChangeListener.onStartTrackingTouch(this)
 
         // using java reflection to change progress without triggering listener
         var clazz: Class<*> = this::class.java  // may be subclass of SeekBar
-        while(clazz.name != "android.widget.ProgressBar") {  // since SeekBar is a subclass of ProgressBar this should not be an infinite loop
+        while (clazz.name != "android.widget.ProgressBar") {  // since SeekBar is a subclass of ProgressBar this should not be an infinite loop
             clazz = clazz.superclass as Class<*>
         }
         val progressBarClazz = clazz
@@ -245,17 +248,24 @@ abstract class AbstractUnitTest<T : Activity>(clazz: Class<T>) {
      *
      * @param permissionsRequired list of requiredPermission, ex: listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
      * @param expectedRequestCode requestCode that test expect implementation to use in their code
+     * @param additionalMessage additional message to be displayed on required permission assertion
      */
-    fun assertRequestPermissions(permissionsRequired: List<String>, expectedRequestCode: Int = 1){
+    fun assertRequestPermissions(
+        permissionsRequired: List<String>,
+        expectedRequestCode: Int = 1,
+        additionalMessage: String? = null,
+    ) {
 
         val messageAnyPermissionRequest = "Have you asked any permissions?"
-        val permissionRequest = shadowActivity.lastRequestedPermission ?: throw java.lang.AssertionError(
-            messageAnyPermissionRequest
-        )
+        val permissionRequest =
+            shadowActivity.lastRequestedPermission ?: throw java.lang.AssertionError(
+                messageAnyPermissionRequest
+            )
 
         permissionsRequired.forEach { permissionRequired: String ->
 
-            val messagePermissionRequired = "Have you asked permission $permissionRequired"
+            val messagePermissionRequired = "Have you asked permission $permissionRequired" +
+                    if (additionalMessage != null) " $additionalMessage" else ""
 
             val hasRequestedPermission =
                 permissionRequest.requestedPermissions.any { it == permissionRequired }
@@ -292,7 +302,7 @@ abstract class AbstractUnitTest<T : Activity>(clazz: Class<T>) {
         shadowActivity.clickMenuItem(identifier)
         val timeAfterClick = clock.millis()
 
-        shadowLooper.idleFor(Duration.ofMillis(millis- (timeAfterClick - timeBeforeClick)))
+        shadowLooper.idleFor(Duration.ofMillis(millis - (timeAfterClick - timeBeforeClick)))
         val timeAfterIdle = clock.millis()
         return (timeAfterIdle - timeBeforeClick).toInt()
     }
@@ -304,10 +314,13 @@ abstract class AbstractUnitTest<T : Activity>(clazz: Class<T>) {
      *
      *  Returns the AlertDialog instance paired with its shadow
      */
-    fun getLastAlertDialogWithShadow(errorMessageNotFound: String) : Pair<AlertDialog, ShadowAlertDialog> {
-        val latestDialog:  AlertDialog? = ShadowAlertDialog.getLatestAlertDialog()
+    fun getLastAlertDialogWithShadow(errorMessageNotFound: String): Pair<AlertDialog, ShadowAlertDialog> {
+        val latestDialog: AlertDialog? = ShadowAlertDialog.getLatestAlertDialog()
 
-        assertNotNull("$errorMessageNotFound$ Make sure you are using android.app.AlertDialog", latestDialog)
+        assertNotNull(
+            "$errorMessageNotFound$ Make sure you are using android.app.AlertDialog",
+            latestDialog
+        )
 
         return latestDialog!! to Shadow.extract(latestDialog)
     }
@@ -326,18 +339,25 @@ abstract class AbstractUnitTest<T : Activity>(clazz: Class<T>) {
         fakeResultList: List<T>,
         caseDescription: String = "",
         assertItems: (itemViewSupplier: () -> View, position: Int, item: T) -> Unit
-    ) : Unit {
+    ): Unit {
 
-        assertNotNull("$caseDescription Your recycler view adapter should not be null", this.adapter)
+        assertNotNull(
+            "$caseDescription Your recycler view adapter should not be null",
+            this.adapter
+        )
 
         val expectedSize = fakeResultList.size
 
         val actualSize = this.adapter!!.itemCount
-        Assert.assertEquals("$caseDescription Incorrect number of list items", expectedSize, actualSize)
+        Assert.assertEquals(
+            "$caseDescription Incorrect number of list items",
+            expectedSize,
+            actualSize
+        )
 
-        if(expectedSize == 0) {
+        if (expectedSize == 0) {
             return
-        } else if(expectedSize > 0) {
+        } else if (expectedSize > 0) {
             val maxItemWidth = (0 until expectedSize)
                 .asSequence()
                 .mapNotNull { this.findViewHolderForAdapterPosition(it)?.itemView?.width }
@@ -351,12 +371,12 @@ abstract class AbstractUnitTest<T : Activity>(clazz: Class<T>) {
                 .maxOrNull()
                 ?: throw AssertionError("$caseDescription No item is being displayed on RecyclerView, is it big enough to display one item?")
             val listHeight = maxItemHeight * (actualSize + 1)
-            this.layout(0,0, listHeight, listWidth)  // may increase clock time
+            this.layout(0, 0, listHeight, listWidth)  // may increase clock time
 
-            for((i, song) in fakeResultList.withIndex()) {
+            for ((i, song) in fakeResultList.withIndex()) {
 
                 val itemViewSupplier = {
-                    this.layout(0,0, listHeight, listWidth)  // may increase clock time
+                    this.layout(0, 0, listHeight, listWidth)  // may increase clock time
                     scrollToPosition(i)
                     shadowLooper.idleFor(500, TimeUnit.MILLISECONDS)
                     findViewHolderForAdapterPosition(i)?.itemView
@@ -386,18 +406,25 @@ abstract class AbstractUnitTest<T : Activity>(clazz: Class<T>) {
         fakeResultList: List<T>,
         caseDescription: String = "",
         assertItems: (itemViewSupplier: () -> View, position: Int, item: T, elapsedTime: Int) -> Unit
-    ) : Unit {
+    ): Unit {
 
-        assertNotNull("$caseDescription Your recycler view adapter should not be null", this.adapter)
+        assertNotNull(
+            "$caseDescription Your recycler view adapter should not be null",
+            this.adapter
+        )
 
         val expectedSize = fakeResultList.size
 
         val actualSize = this.adapter!!.itemCount
-        Assert.assertEquals("$caseDescription Incorrect number of list items", expectedSize, actualSize)
+        Assert.assertEquals(
+            "$caseDescription Incorrect number of list items",
+            expectedSize,
+            actualSize
+        )
 
-        if(expectedSize == 0) {
+        if (expectedSize == 0) {
             return
-        } else if(expectedSize > 0) {
+        } else if (expectedSize > 0) {
             val maxItemWidth = (0 until expectedSize)
                 .asSequence()
                 .mapNotNull { this.findViewHolderForAdapterPosition(it)?.itemView?.width }
@@ -411,20 +438,20 @@ abstract class AbstractUnitTest<T : Activity>(clazz: Class<T>) {
                 .maxOrNull()
                 ?: throw AssertionError("$caseDescription No item is being displayed on RecyclerView, is it big enough to display one item?")
             val listHeight = maxItemHeight * (actualSize + 1)
-            this.layout(0,0, listHeight, listWidth)  // may increase clock time
+            this.layout(0, 0, listHeight, listWidth)  // may increase clock time
 
-            for((i, song) in fakeResultList.withIndex()) {
+            for ((i, song) in fakeResultList.withIndex()) {
                 val timeBefore = SystemClock.currentGnssTimeClock().millis()
                 // setting height to ensure that all items are inflated. Height might change after assertItems, keep statement inside loop.
                 val itemViewSupplier = {
-                    this.layout(0,0, listHeight, listWidth)  // may increase clock time
+                    this.layout(0, 0, listHeight, listWidth)  // may increase clock time
                     scrollToPosition(i)
                     shadowLooper.idleFor(500, TimeUnit.MILLISECONDS)
                     findViewHolderForAdapterPosition(i)?.itemView
                         ?: throw AssertionError("$caseDescription Could not find list item with index $i")
                 }
                 val timeAfter = SystemClock.currentGnssTimeClock().millis()
-                assertItems(itemViewSupplier, i, song, (timeAfter -  timeBefore).toInt())
+                assertItems(itemViewSupplier, i, song, (timeAfter - timeBefore).toInt())
             }
 
         } else {
@@ -444,9 +471,13 @@ abstract class AbstractUnitTest<T : Activity>(clazz: Class<T>) {
     fun RecyclerView.assertSingleListItem(
         itemIndex: Int,
         caseDescription: String = "",
-        action: (itemViewSupplier: () -> View) -> Unit) {
+        action: (itemViewSupplier: () -> View) -> Unit
+    ) {
 
-        assertNotNull("$caseDescription Your recycler view adapter should not be null", this.adapter)
+        assertNotNull(
+            "$caseDescription Your recycler view adapter should not be null",
+            this.adapter
+        )
 
         val expectedMinSize = itemIndex + 1
 
@@ -456,7 +487,7 @@ abstract class AbstractUnitTest<T : Activity>(clazz: Class<T>) {
             actualSize >= expectedMinSize
         )
 
-        if(actualSize >= expectedMinSize) {
+        if (actualSize >= expectedMinSize) {
             val maxItemWidth = (0 until actualSize)
                 .asSequence()
                 .mapNotNull { this.findViewHolderForAdapterPosition(it)?.itemView?.width }
@@ -470,7 +501,7 @@ abstract class AbstractUnitTest<T : Activity>(clazz: Class<T>) {
                 .maxOrNull()
                 ?: throw AssertionError("$caseDescription No item is being displayed on RecyclerView, is it big enough to display one item?")
             val listHeight = maxItemHeight * (actualSize + 1)
-            this.layout(0,0, listHeight, listWidth)  // may increase clock time
+            this.layout(0, 0, listHeight, listWidth)  // may increase clock time
 
             val itemViewSupplier = {
                 this.layout(0, 0, listWidth, listHeight)  // may increase clock time

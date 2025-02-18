@@ -94,6 +94,55 @@ files:
   - name: src/test/java/org/hyperskill/musicplayer/Stage5UnitTest.kt
     visible: false
     learner_created: false
+  - name: src/main/java/org/hyperskill/musicplayer/model/TrackItem.kt
+    visible: true
+    learner_created: true
+  - name: src/main/java/org/hyperskill/musicplayer/viewModel/PlayerViewModel.kt
+    visible: true
+    learner_created: true
+  - name: src/main/res/drawable/ic_stop.xml
+    visible: true
+    learner_created: true
+  - name: src/main/res/drawable/song_selector_background.xml
+    visible: true
+    learner_created: true
+  - name: src/main/res/layout/fragment_main_player_controller.xml
+    visible: true
+    learner_created: true
+  - name: src/main/java/org/hyperskill/musicplayer/MainAddPlaylistFragment.kt
+    visible: true
+    learner_created: true
+  - name: src/main/java/org/hyperskill/musicplayer/adapter/PlaylistAdapter.kt
+    visible: true
+    learner_created: true
+  - name: src/main/res/menu/playlist_menu.xml
+    visible: true
+    learner_created: true
+  - name: src/main/java/org/hyperskill/musicplayer/model/Playlist.kt
+    visible: true
+    learner_created: true
+  - name: src/main/java/org/hyperskill/musicplayer/model/Song.kt
+    visible: true
+    learner_created: true
+  - name: src/main/res/layout/list_item_song.xml
+    visible: true
+    learner_created: true
+  - name: src/main/java/org/hyperskill/musicplayer/database/DatabaseHelper.kt
+    visible: true
+    learner_created: true
+  - name: src/main/java/org/hyperskill/musicplayer/MainPlayerControllerFragment.kt
+    visible: true
+    learner_created: true
+  - name: src/main/res/layout/list_item_song_selector.xml
+    visible: true
+    learner_created: true
+  - name: src/main/res/layout/fragment_main_add_playlist.xml
+    visible: true
+    learner_created: true
 feedback_link: https://hyperskill.org/learn/step/22743#comment
-status: Unchecked
+status: Solved
+feedback:
+  message: Well done! You've finished the project. Select a new project on <a href="https://hyperskill.org/projects">Hyperskill</a>
+    to continue learning.
+  time: "Tue, 18 Feb 2025 18:48:25 UTC"
 record: -1

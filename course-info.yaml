@@ -11,4 +11,4 @@ environment: Android
 content:
   - Music Player
 mode: Study
-yaml_version: 1
+yaml_version: 2

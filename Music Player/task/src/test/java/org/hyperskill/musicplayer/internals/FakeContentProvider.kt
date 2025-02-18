@@ -11,7 +11,7 @@ class FakeContentProvider : ContentProvider() {
 
     companion object {
         var fakeSongResult: List<SongFake> = listOf()
-        var hasPermissionToReadExternalStorage = true
+        var hasPermissionToReadAudio = true
     }
 
     override fun onCreate(): Boolean {
@@ -26,7 +26,7 @@ class FakeContentProvider : ContentProvider() {
         sortOrder: String?
     ): Cursor? {
 
-        if(hasPermissionToReadExternalStorage.not()) {
+        if(hasPermissionToReadAudio.not()) {
             throw AssertionError(
                 "You are trying to read from external storage, " +
                         "but you don't have permission to read from external storage"

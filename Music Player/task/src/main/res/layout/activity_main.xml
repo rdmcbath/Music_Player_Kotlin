@@ -7,8 +7,9 @@
 
     <Button
         android:id="@+id/mainButtonSearch"
-        android:layout_width="match_parent"
+        android:layout_width="320dp"
         android:layout_height="wrap_content"
+        android:layout_gravity="center"
         android:text="@string/main_button_search_text"
         tools:layout_editor_absoluteX="15dp" />
 
@@ -22,5 +23,6 @@
         android:id="@+id/mainFragmentContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_weight="3" />
+        android:layout_weight="3"
+        tools:layout="@layout/fragment_main_player_controller"/>
 </LinearLayout>

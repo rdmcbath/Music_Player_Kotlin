@@ -39,7 +39,7 @@ class Stage3UnitTest : MusicPlayerUnitTests<MainActivity>(MainActivity::class.ja
     fun setUp() {
         CustomShadowCountDownTimer.handler = Handler(activity.mainLooper)
         setupContentProvider(songFakeList)
-        shadowActivity.grantPermissions(Manifest.permission.READ_EXTERNAL_STORAGE)
+        shadowActivity.grantPermissions(Manifest.permission.READ_MEDIA_AUDIO)
         CustomMediaPlayerShadow.setFakeSong(songFakeList[0])
         CustomMediaPlayerShadow.acceptRawWisdom = true
     }
